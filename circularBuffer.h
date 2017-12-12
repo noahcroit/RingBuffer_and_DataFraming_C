@@ -19,18 +19,19 @@
 #include <string.h>
 
 /* Define for buffer data structure */
-#define     _BUFFER_DATA_TYPE_DEFAULT   int16_t
+#define     CIRCULAR_BUFFER_SIZE            8
+#define     _BUFFER_DATA_TYPE_DEFAULT       int16_t
 
 typedef _BUFFER_DATA_TYPE_DEFAULT   _BUFFER_DATA_TYPE;
 
 typedef struct {
-    _BUFFER_DATA_TYPE       buffer[BUFFER_SIZE];
+    _BUFFER_DATA_TYPE       buffer[CIRCULAR_BUFFER_SIZE];
     int16_t                 rear;
     int16_t                 front;
     int16_t		            size;
 
 } CircularBufferTypeDef;
 
-void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, _BUFFER_DATA_TYPE *enqueueData, uint32_t enqueueSize);
-void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, _BUFFER_DATA_TYPE *dequeueData, uint32_t dequeueSize);
+void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, void *enqueueData, uint32_t enqueueSize);
+void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueData, uint32_t dequeueSize);
 void CircularBuffer_Init(CircularBufferTypeDef *targetBuffer);
