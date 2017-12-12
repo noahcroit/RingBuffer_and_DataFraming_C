@@ -19,7 +19,6 @@
 #include <string.h>
 
 /* Define for buffer data structure */
-#define     BUFFER_SIZE                 8
 #define     _BUFFER_DATA_TYPE_DEFAULT   int16_t
 
 typedef _BUFFER_DATA_TYPE_DEFAULT   _BUFFER_DATA_TYPE;

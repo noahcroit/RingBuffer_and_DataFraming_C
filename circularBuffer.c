@@ -27,8 +27,9 @@
     + 3) For initialize circular buffer, call the function CircularBuffer_Init(CircularBufferTypeDef *targetBuffer : target FIFO buffer)
 
 
-  * Note : How to changing a dataType of circular buffer
+  * Note : How to changing a bufferSize and dataType of circular buffer
     ----------------------------------------------------
+    + BufferSize is defined by CIRCULAR_BUFFER_SIZE in circularBuffer.h. Default size is 8 elements.
     + The default dataType of circular buffer is defined by typedef : _BUFFER_DATA_TYPE in circularBuffer.h which is "int16_t".
     + This can be changed to another type (example, float32_t, uint32_t etc.) by changing typedef : _BUFFER_DATA_TYPE_DEFAULT in circularBuffer.h to another type.
 **/
@@ -42,7 +43,7 @@
   * @param  enqueueSize  : size of enqueued data
   * @retval None
   */
-void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, _BUFFER_DATA_TYPE *enqueueData, uint32_t enqueueSize)
+void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, void *enqueueData, uint32_t enqueueSize)
 {
     static uint8_t bufferState;
 
@@ -143,7 +144,7 @@ void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, _BUFFER_DATA_TY
   * @param  dequeueSize  : size of dequeued data
   * @retval None
   */
-void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, _BUFFER_DATA_TYPE *dequeueData, uint32_t dequeueSize)
+void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueData, uint32_t dequeueSize)
 {
     static uint8_t bufferState;
 
@@ -255,6 +256,6 @@ void CircularBuffer_Init(CircularBufferTypeDef *targetBuffer)
 {
     targetBuffer->front = -1;
     targetBuffer->rear  = -1;
-    targetBuffer->size  = BUFFER_SIZE;
+    targetBuffer->size  = CIRCULAR_BUFFER_SIZE;
     memset(targetBuffer->buffer, 0, sizeof(targetBuffer->buffer));
 }
