@@ -38,8 +38,8 @@
 
 /**
   * @brief  CircularBuffer_Enqueue() : This function is used to "En-queue" an input data into a circular buffer.
-  * @param  targetBuffer : target circular buffer (pass by ref)
-  * @param  enqueueData  : enqueued data
+  * @param  targetBuffer : target circular buffer
+  * @param  enqueueData  : enqueued data (pass by ref)
   * @param  enqueueSize  : size of enqueued data
   * @retval None
   */
@@ -53,93 +53,93 @@ void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, void *enqueueDa
       * 2 -> with rear > front
       * 3 -> with rear < front
       */
-    if((targetBuffer->rear == -1)&&(targetBuffer->front == -1))     bufferState = 0;    //Empty state
-    else if(targetBuffer->rear == targetBuffer->front)              bufferState = 1;    //Full state
-    else if(targetBuffer->rear  > targetBuffer->front)              bufferState = 2;    //rear > front
-    else if(targetBuffer->rear  < targetBuffer->front)              bufferState = 3;    //rear < front
+    if(CircularBuffer_IsEmpty(targetBuffer))         bufferState = 0;    //Empty state
+    else if(CircularBuffer_IsFull(targetBuffer))     bufferState = 1;    //Full state
+    else if(targetBuffer->r  > targetBuffer->f)      bufferState = 2;    //rear > front
+    else if(targetBuffer->r  < targetBuffer->f)      bufferState = 3;    //rear < front
 
     switch (bufferState){
-        case 0:     //Empty state
-            /* Change buffer to non-empty state (buffer is reset) */
-            targetBuffer->front = 0;
-            targetBuffer->rear  = 0;
-            goto CASE_R_GREATER_THAN_F;
-            break;
+    case 0:     //Empty state
+        /* Change buffer to non-empty state (buffer is reset) */
+        targetBuffer->f = 0;
+        targetBuffer->r = 0;
+        goto CASE_R_GREATER_THAN_F;
+        break;
 
-        case 1:     //Full state
-            /* Do nothing */
-            break;
+    case 1:     //Full state
+        /* Do nothing */
+        break;
 
-        case 2:     //rear > front
-            CASE_R_GREATER_THAN_F:
-            if((targetBuffer->rear + enqueueSize) <= targetBuffer->size)
+    case 2:     //rear > front
+        CASE_R_GREATER_THAN_F:
+        if((targetBuffer->r + enqueueSize) <= targetBuffer->bufferSize)
+        {
+            /**  memcpy() between buffer and enqueue data
+              *  start from rear:r to r + enqueueSize
+              *  when r + enqueueSize does not exceed end-of-buffer   (Not wrapping)
+              *  then, copy only 1 section
+              */
+            memcpy(targetBuffer->buffer + (targetBuffer->r), enqueueData, sizeof(_BUFFER_DATA_TYPE)*enqueueSize);
+            targetBuffer->r = (targetBuffer->r + enqueueSize)%targetBuffer->bufferSize;
+        }
+        else
+        {
+             /**  memcpy() between buffer and enqueue data
+              *  start from rear:r to r + enqueueSize
+              *  when r + enqueueSize exceed end-of-buffer            (Wrapping)
+              *  then, copy with 2 sections
+              */
+
+            /* 1st section copy (r to end-of-buffer part) */
+            memcpy(targetBuffer->buffer + (targetBuffer->r), enqueueData, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->bufferSize - targetBuffer->r));
+
+            /* 2nd section copy (wrapping part) */
+            // No overwritten occur
+            if(enqueueSize + targetBuffer->r - targetBuffer->bufferSize <= targetBuffer->f)
             {
-                /**  memcpy() between buffer and enqueue data
-                  *  start from rear:r to r + enqueueSize
-                  *  when r + enqueueSize does not exceed end-of-buffer   (Not wrapping)
-                  *  then, copy only 1 section
-                  */
-                memcpy(targetBuffer->buffer + (targetBuffer->rear), enqueueData, sizeof(_BUFFER_DATA_TYPE)*enqueueSize);
-                targetBuffer->rear = (targetBuffer->rear + enqueueSize)%targetBuffer->size;
+                memcpy(targetBuffer->buffer, enqueueData + (targetBuffer->bufferSize - targetBuffer->r), sizeof(_BUFFER_DATA_TYPE)*(enqueueSize + targetBuffer->r - targetBuffer->bufferSize));
+                targetBuffer->r = (targetBuffer->r + enqueueSize)%targetBuffer->bufferSize;
             }
+            // Overwritten occur during wrapping!
             else
             {
-                 /**  memcpy() between buffer and enqueue data
-                  *  start from rear:r to r + enqueueSize
-                  *  when r + enqueueSize exceed end-of-buffer            (Wrapping)
-                  *  then, copy with 2 sections
-                  */
-
-                /* 1st section copy (r to end-of-buffer part) */
-                memcpy(targetBuffer->buffer + (targetBuffer->rear), enqueueData, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->size - targetBuffer->rear));
-
-                /* 2nd section copy (wrapping part) */
-                // No overwritten occur
-                if(enqueueSize + targetBuffer->rear - targetBuffer->size <= targetBuffer->front)
-                {
-                    memcpy(targetBuffer->buffer, enqueueData + (targetBuffer->size - targetBuffer->rear), sizeof(_BUFFER_DATA_TYPE)*(enqueueSize + targetBuffer->rear - targetBuffer->size));
-                    targetBuffer->rear = (targetBuffer->rear + enqueueSize)%targetBuffer->size;
-                }
-                // Overwritten occur during wrapping!
-                else
-                {
-                    memcpy(targetBuffer->buffer, enqueueData + (targetBuffer->size - targetBuffer->rear), sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->front));
-                    targetBuffer->rear = targetBuffer->front;
-                }
+                memcpy(targetBuffer->buffer, enqueueData + (targetBuffer->bufferSize - targetBuffer->r), sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->f));
+                targetBuffer->r = targetBuffer->f;
             }
-            break;
+        }
+        break;
 
-        case 3:     //rear < front
+    case 3:     //rear < front
 
-            if(targetBuffer->rear + enqueueSize <= targetBuffer->front)
-            {
-                /**  memcpy() between buffer and enqueue data
-                  *  start from rear:r to r + enqueueSize
-                  *  when r + enqueueSize is not exceed front : f   (Overwritten do not occur)
-                  */
-                memcpy(targetBuffer->buffer + (targetBuffer->rear), enqueueData, sizeof(_BUFFER_DATA_TYPE)*enqueueSize);
-                targetBuffer->rear = (targetBuffer->rear + enqueueSize)%targetBuffer->size;
-            }
-            else
-            {
-                /**  memcpy() between buffer and enqueue data
-                  *  start from rear:r to r + enqueueSize
-                  *  when r + enqueueSize is exceed front : f       (Overwritten occur!)
-                  */
-                memcpy(targetBuffer->buffer + (targetBuffer->rear), enqueueData, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->front - targetBuffer->rear));
-                targetBuffer->rear = targetBuffer->front;
-            }
-            break;
+        if(targetBuffer->r + enqueueSize <= targetBuffer->f)
+        {
+            /**  memcpy() between buffer and enqueue data
+              *  start from rear:r to r + enqueueSize
+              *  when r + enqueueSize is not exceed front : f   (Overwritten do not occur)
+              */
+            memcpy(targetBuffer->buffer + (targetBuffer->r), enqueueData, sizeof(_BUFFER_DATA_TYPE)*enqueueSize);
+            targetBuffer->r = (targetBuffer->r + enqueueSize)%targetBuffer->bufferSize;
+        }
+        else
+        {
+            /**  memcpy() between buffer and enqueue data
+              *  start from rear:r to r + enqueueSize
+              *  when r + enqueueSize is exceed front : f       (Overwritten occur!)
+              */
+            memcpy(targetBuffer->buffer + (targetBuffer->r), enqueueData, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->f - targetBuffer->r));
+            targetBuffer->r = targetBuffer->f;
+        }
+        break;
 
-        default:
-            /* Do nothing */
-            break;
+    default:
+        /* Do nothing */
+        break;
     }
 
 }
 /**
   * @brief  CircularBuffer_Dequeue() : This function is used to "De-queue" an input data into a circular buffer.
-  * @param  targetBuffer : target circular buffer (pass by ref)
+  * @param  targetBuffer : target circular buffer
   * @param  dequeueData  : dequeued data (pass by ref)
   * @param  dequeueSize  : size of dequeued data
   * @retval None
@@ -153,109 +153,177 @@ void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueDa
       * 1 -> with rear > front
       * 2 -> with rear <= front
       */
-    if((targetBuffer->rear == -1)&&(targetBuffer->front == -1))     bufferState = 0;    //Empty state
-    else if(targetBuffer->rear  > targetBuffer->front)              bufferState = 1;    //rear > front
-    else if(targetBuffer->rear  <= targetBuffer->front)             bufferState = 2;    //rear <= front
+    if(CircularBuffer_IsEmpty(targetBuffer))            bufferState = 0;    //Empty state
+    else if(targetBuffer->r  >  targetBuffer->f)        bufferState = 1;    //rear > front
+    else if(targetBuffer->r  <= targetBuffer->f)        bufferState = 2;    //rear <= front
 
     switch (bufferState){
-        case 0:     //Empty state
-            /* Buffer is empty, There's no data in buffer. So, do nothing. */
-            break;
+    case 0:     //Empty state
+        /* Buffer is empty, There's no data in buffer. So, do nothing. */
+        break;
 
-        case 1:     //rear > front
-            if(dequeueSize <= (targetBuffer->rear - targetBuffer->front))
+    case 1:     //rear > front
+        if(dequeueSize <= (targetBuffer->r - targetBuffer->f))
+        {
+            /**  memcpy() between buffer and dequeue data
+              *  start from front:f to f + dequeueSize
+              *  when f + dequeueSize does not exceed r
+              */
+            memcpy(dequeueData, targetBuffer->buffer + targetBuffer->f, sizeof(_BUFFER_DATA_TYPE)*dequeueSize);
+            memset(targetBuffer->buffer + targetBuffer->f, 0, sizeof(_BUFFER_DATA_TYPE)*dequeueSize);
+            targetBuffer->f = targetBuffer->f + dequeueSize;
+        }
+        else
+        {
+            /**  memcpy() between buffer and dequeue data
+              *  start from front:f to f + dequeueSize
+              *  when f + dequeueSize exceed r  (overwritten occur!)
+              */
+            memcpy(dequeueData, targetBuffer->buffer + targetBuffer->f, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->r - targetBuffer->f));
+            memset(targetBuffer->buffer + targetBuffer->f, 0, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->r - targetBuffer->f));
+            targetBuffer->r = targetBuffer->r;
+        }
+
+        if(targetBuffer->f == targetBuffer->r)
+        {
+            /** check if buffer is empty after dequeue
+              * then, set r,f to -1
+              */
+            targetBuffer->f = -1;
+            targetBuffer->r  = -1;
+        }
+        break;
+
+    case 2:     //rear <= front
+        if(targetBuffer->f + dequeueSize <= targetBuffer->bufferSize)
+        {
+            /**  memcpy() between buffer and dequeue data
+              *  start from front:f to f + dequeueSize
+              *  when f + dequeueSize is not exceed end-of-buffer   (Not Wrapping)
+              *  then, dequeue only 1 section
+              */
+            memcpy(dequeueData, targetBuffer->buffer + targetBuffer->f, sizeof(_BUFFER_DATA_TYPE)*(dequeueSize));
+            memset(targetBuffer->buffer + targetBuffer->f, 0, sizeof(_BUFFER_DATA_TYPE)*(dequeueSize));
+            targetBuffer->f = (targetBuffer->f + dequeueSize)%targetBuffer->bufferSize;
+        }
+        else
+        {
+            /**  memcpy() between buffer and dequeue data
+              *  start from front:f to f + dequeueSize
+              *  when f + dequeueSize is exceed end-of-buffer   (Wrapping)
+              *  then, dequeue with 2 sections
+              */
+            /* 1st section copy */
+            memcpy(dequeueData, targetBuffer->buffer + targetBuffer->f, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->bufferSize - targetBuffer->f));
+            memset(targetBuffer->buffer + targetBuffer->f, 0, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->bufferSize - targetBuffer->f));
+
+            /* 2nd section copy (wrapping part) */
+            // No overwritten occur
+            if(dequeueSize + targetBuffer->f - targetBuffer->bufferSize <= targetBuffer->r)
             {
-                /**  memcpy() between buffer and dequeue data
-                  *  start from front:f to f + dequeueSize
-                  *  when f + dequeueSize does not exceed r
-                  */
-                memcpy(dequeueData, targetBuffer->buffer + targetBuffer->front, sizeof(_BUFFER_DATA_TYPE)*dequeueSize);
-                memset(targetBuffer->buffer + targetBuffer->front, 0, sizeof(_BUFFER_DATA_TYPE)*dequeueSize);
-                targetBuffer->front = targetBuffer->front + dequeueSize;
+                memcpy(dequeueData + (targetBuffer->bufferSize - targetBuffer->f), targetBuffer->buffer, sizeof(_BUFFER_DATA_TYPE)*(dequeueSize + targetBuffer->f - targetBuffer->bufferSize));
+                memset(targetBuffer->buffer, 0, sizeof(_BUFFER_DATA_TYPE)*(dequeueSize + targetBuffer->f - targetBuffer->bufferSize));
+                targetBuffer->f = (targetBuffer->f + dequeueSize)%targetBuffer->bufferSize;
             }
+            // Overwritten occur during wrapping!
             else
             {
-                /**  memcpy() between buffer and dequeue data
-                  *  start from front:f to f + dequeueSize
-                  *  when f + dequeueSize exceed r  (overwritten occur!)
-                  */
-                memcpy(dequeueData, targetBuffer->buffer + targetBuffer->front, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->rear - targetBuffer->front));
-                memset(targetBuffer->buffer + targetBuffer->front, 0, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->rear - targetBuffer->front));
-                targetBuffer->front = targetBuffer->rear;
+                memcpy(dequeueData + (targetBuffer->bufferSize - targetBuffer->f), targetBuffer->buffer, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->r));
+                memset(targetBuffer->buffer, 0, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->r));
+                targetBuffer->f = targetBuffer->r;
             }
+        }
+        if(targetBuffer->f == targetBuffer->r)
+        {
+            /** check if buffer is empty after dequeue
+              * then, set r,f to -1
+              */
+            targetBuffer->f = -1;
+            targetBuffer->r  = -1;
+        }
+        break;
 
-            if(targetBuffer->front == targetBuffer->rear)
-            {
-                /** check if buffer is empty after dequeue
-                  * then, set r,f to -1
-                  */
-                targetBuffer->front = -1;
-                targetBuffer->rear  = -1;
-            }
-            break;
-
-        case 2:     //rear <= front
-            if(targetBuffer->front + dequeueSize <= targetBuffer->size)
-            {
-                /**  memcpy() between buffer and dequeue data
-                  *  start from front:f to f + dequeueSize
-                  *  when f + dequeueSize is not exceed end-of-buffer   (Not Wrapping)
-                  *  then, dequeue only 1 section
-                  */
-                memcpy(dequeueData, targetBuffer->buffer + targetBuffer->front, sizeof(_BUFFER_DATA_TYPE)*(dequeueSize));
-                memset(targetBuffer->buffer + targetBuffer->front, 0, sizeof(_BUFFER_DATA_TYPE)*(dequeueSize));
-                targetBuffer->front = (targetBuffer->front + dequeueSize)%targetBuffer->size;
-            }
-            else
-            {
-                /**  memcpy() between buffer and dequeue data
-                  *  start from front:f to f + dequeueSize
-                  *  when f + dequeueSize is exceed end-of-buffer   (Wrapping)
-                  *  then, dequeue with 2 sections
-                  */
-                /* 1st section copy */
-                memcpy(dequeueData, targetBuffer->buffer + targetBuffer->front, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->size - targetBuffer->front));
-                memset(targetBuffer->buffer + targetBuffer->front, 0, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->size - targetBuffer->front));
-
-                /* 2nd section copy (wrapping part) */
-                // No overwritten occur
-                if(dequeueSize + targetBuffer->front - targetBuffer->size <= targetBuffer->rear)
-                {
-                    memcpy(dequeueData + (targetBuffer->size - targetBuffer->front), targetBuffer->buffer, sizeof(_BUFFER_DATA_TYPE)*(dequeueSize + targetBuffer->front - targetBuffer->size));
-                    memset(targetBuffer->buffer, 0, sizeof(_BUFFER_DATA_TYPE)*(dequeueSize + targetBuffer->front - targetBuffer->size));
-                    targetBuffer->front = (targetBuffer->front + dequeueSize)%targetBuffer->size;
-                }
-                // Overwritten occur during wrapping!
-                else
-                {
-                    memcpy(dequeueData + (targetBuffer->size - targetBuffer->front), targetBuffer->buffer, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->rear));
-                    memset(targetBuffer->buffer, 0, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->rear));
-                    targetBuffer->front = targetBuffer->rear;
-                }
-            }
-            if(targetBuffer->front == targetBuffer->rear)
-            {
-                /** check if buffer is empty after dequeue
-                  * then, set r,f to -1
-                  */
-                targetBuffer->front = -1;
-                targetBuffer->rear  = -1;
-            }
-            break;
-
-        default:
-            break;
+    default:
+        break;
     }
 }
 /**
   * @brief  CircularBuffer_Init() : This function is used to "initialize" a circular buffer struct.
-  * @param  targetBuffer : target circular buffer (pass by ref)
+  * @param  targetBuffer : target circular buffer
+  * @param  SetFrameSize    : size of frame-based processing
+  * @param  SetOverlap      : frame overlap (must between 0 up to "SetFrameSize")
   * @retval None
   */
-void CircularBuffer_Init(CircularBufferTypeDef *targetBuffer)
+void CircularBuffer_Init(CircularBufferTypeDef *targetBuffer, int8_t SetFrameSize, int16_t SetOverlap)
 {
-    targetBuffer->front = -1;
-    targetBuffer->rear  = -1;
-    targetBuffer->size  = CIRCULAR_BUFFER_SIZE;
+    targetBuffer->f = -1;
+    targetBuffer->r  = -1;
+    targetBuffer->bufferSize  = CIRCULAR_BUFFER_SIZE;
+
+    if(SetFrameSize > CIRCULAR_BUFFER_SIZE)     targetBuffer->frameSize = CIRCULAR_BUFFER_SIZE;
+    else    targetBuffer->frameSize = SetFrameSize;
+
+    targetBuffer->overlap   = SetOverlap;
     memset(targetBuffer->buffer, 0, sizeof(targetBuffer->buffer));
+}
+
+/**
+  * @brief  CircularBuffer_IsFull() : This function is used to check if a circular buffer is full or not.
+  * @param  targetBuffer : target circular buffer
+  * @retval 0 -> not full
+  *         1 -> full
+  */
+uint8_t CircularBuffer_IsFull(CircularBufferTypeDef *targetBuffer)
+{
+    if((targetBuffer->f == targetBuffer->r) && (targetBuffer->f != -1))      return 1;
+    else        return 0;
+}
+
+/**
+  * @brief  CircularBuffer_IsEmpty() : This function is used to check if a circular buffer is empty or not.
+  * @param  targetBuffer : target circular buffer
+  * @retval 0 -> not empty
+  *         1 -> empty
+  */
+uint8_t CircularBuffer_IsEmpty(CircularBufferTypeDef *targetBuffer)
+{
+    if((targetBuffer->r == -1) && (targetBuffer->f == -1))      return 1;
+    else        return 0;
+}
+
+/**
+  * @brief  CircularBuffer_CheckNextFrameReady() : This function is used to check if ring buffer is ready for the next frame-based processing or not.
+  * @param  buffer : circular buffer
+  * @retval 1  -> ready
+  *         0  -> not ready
+  *         -1 -> error
+  */
+int8_t CircularBuffer_CheckNextFrameReady(CircularBufferTypeDef *buffer)
+{
+    static uint8_t firstFrameReady = 0;
+
+    if(firstFrameReady == 0)
+    {
+        if(((buffer->r - buffer->f)%(buffer->frameSize) == 0) && (buffer->f != buffer->r))
+        {
+            firstFrameReady = 1;
+            return 1;
+        }
+        else    return 0;
+    }
+    else if(firstFrameReady != 0)
+    {
+        if(buffer->r >= buffer->f)
+        {
+            if((buffer->r - buffer->f)%(buffer->overlap) == 0)     return 1;
+            else    return 0;
+        }
+        else if(buffer->r < buffer->f)
+        {
+            if((buffer->bufferSize + buffer->r - buffer->f)%(buffer->overlap) == 0)    return 1;
+            else    return 0;
+        }
+    }
+
+    return -1;	//error
 }

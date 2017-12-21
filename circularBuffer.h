@@ -25,13 +25,21 @@
 typedef _BUFFER_DATA_TYPE_DEFAULT   _BUFFER_DATA_TYPE;
 
 typedef struct {
-    _BUFFER_DATA_TYPE       buffer[CIRCULAR_BUFFER_SIZE];
-    int16_t                 rear;
-    int16_t                 front;
-    int16_t		            size;
+    _BUFFER_DATA_TYPE   buffer[CIRCULAR_BUFFER_SIZE];   //data 1D array
+    int16_t             r;          //rear
+    int16_t             f;          //front
+    int16_t		        bufferSize; //buffer size
 
+    /* member for frame-based processing */
+    int16_t             frameSize;      //must be less than or equal to buffer size
+    int16_t             overlap;        //overlap ratio, must between 0 to 1 (floating-point type)
 } CircularBufferTypeDef;
 
-void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, void *enqueueData, uint32_t enqueueSize);
-void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueData, uint32_t dequeueSize);
-void CircularBuffer_Init(CircularBufferTypeDef *targetBuffer);
+/* Function Prototyping for circularBuffer.h */
+void    CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, void *enqueueData, uint32_t enqueueSize);
+void    CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueData, uint32_t dequeueSize);
+void    CircularBuffer_Init(CircularBufferTypeDef *targetBuffer, int8_t SetFrameSize, int16_t SetOverlap);
+uint8_t CircularBuffer_IsEmpty(CircularBufferTypeDef *targetBuffer);
+uint8_t CircularBuffer_IsFull(CircularBufferTypeDef *targetBuffer);
+int8_t  CircularBuffer_CheckNextFrameReady(CircularBufferTypeDef *buffer);
+
