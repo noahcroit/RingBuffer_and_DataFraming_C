@@ -36,14 +36,16 @@
 
 #include "circularBuffer.h"
 
+
+
 /**
   * @brief  CircularBuffer_Enqueue() : This function is used to "En-queue" an input data into a circular buffer.
   * @param  targetBuffer : target circular buffer
-  * @param  enqueueData  : enqueued data (pass by ref)
-  * @param  enqueueSize  : size of enqueued data
+  * @param  enqueueData  : enqueued data pointer
+  * @param  enqueueSize  : size of enqueued data (#of element)
   * @retval None
   */
-void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, void *enqueueData, uint32_t enqueueSize)
+void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, const void *enqueueData, uint32_t enqueueSize)
 {
     static uint8_t bufferState;
 
@@ -53,25 +55,25 @@ void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, void *enqueueDa
       * 2 -> with rear > front
       * 3 -> with rear < front
       */
-    if(CircularBuffer_IsEmpty(targetBuffer))         bufferState = 0;    //Empty state
-    else if(CircularBuffer_IsFull(targetBuffer))     bufferState = 1;    //Full state
-    else if(targetBuffer->r  > targetBuffer->f)      bufferState = 2;    //rear > front
-    else if(targetBuffer->r  < targetBuffer->f)      bufferState = 3;    //rear < front
+    if(CircularBuffer_IsEmpty(targetBuffer))         bufferState = BUF_STATE_EMPTY;         //Empty state
+    else if(CircularBuffer_IsFull(targetBuffer))     bufferState = BUF_STATE_FULL;          //Full state
+    else if(targetBuffer->r  > targetBuffer->f)      bufferState = BUF_STATE_R_MORE_THAN_F; //rear > front
+    else if(targetBuffer->r  < targetBuffer->f)      bufferState = BUF_STATE_R_LESS_THAN_F; //rear < front
 
     switch (bufferState){
-    case 0:     //Empty state
+    case BUF_STATE_EMPTY:     //Empty state
         /* Change buffer to non-empty state (buffer is reset) */
         targetBuffer->f = 0;
         targetBuffer->r = 0;
-        goto CASE_R_GREATER_THAN_F;
+        goto label1;
         break;
 
-    case 1:     //Full state
+    case BUF_STATE_FULL:     //Full state
         /* Do nothing */
         break;
 
-    case 2:     //rear > front
-        CASE_R_GREATER_THAN_F:
+    case BUF_STATE_R_MORE_THAN_F:     //rear > front
+        label1:
         if((targetBuffer->r + enqueueSize) <= targetBuffer->bufferSize)
         {
             /**  memcpy() between buffer and enqueue data
@@ -79,7 +81,7 @@ void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, void *enqueueDa
               *  when r + enqueueSize does not exceed end-of-buffer   (Not wrapping)
               *  then, copy only 1 section
               */
-            memcpy(targetBuffer->buffer + (targetBuffer->r), enqueueData, sizeof(_BUFFER_DATA_TYPE)*enqueueSize);
+            memcpy(targetBuffer->buffer + (targetBuffer->r), enqueueData, (targetBuffer->sizeOfElement)*enqueueSize);
             targetBuffer->r = (targetBuffer->r + enqueueSize)%targetBuffer->bufferSize;
         }
         else
@@ -91,33 +93,31 @@ void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, void *enqueueDa
               */
 
             /* 1st section copy (r to end-of-buffer part) */
-            memcpy(targetBuffer->buffer + (targetBuffer->r), enqueueData, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->bufferSize - targetBuffer->r));
-
+            memcpy(targetBuffer->buffer + (targetBuffer->r), enqueueData, targetBuffer->sizeOfElement*(targetBuffer->bufferSize - targetBuffer->r));
             /* 2nd section copy (wrapping part) */
             // No overwritten occur
             if(enqueueSize + targetBuffer->r - targetBuffer->bufferSize <= targetBuffer->f)
             {
-                memcpy(targetBuffer->buffer, enqueueData + (targetBuffer->bufferSize - targetBuffer->r), sizeof(_BUFFER_DATA_TYPE)*(enqueueSize + targetBuffer->r - targetBuffer->bufferSize));
+                memcpy(targetBuffer->buffer, enqueueData + (targetBuffer->bufferSize - targetBuffer->r), targetBuffer->sizeOfElement*(enqueueSize + targetBuffer->r - targetBuffer->bufferSize));
                 targetBuffer->r = (targetBuffer->r + enqueueSize)%targetBuffer->bufferSize;
             }
             // Overwritten occur during wrapping!
             else
             {
-                memcpy(targetBuffer->buffer, enqueueData + (targetBuffer->bufferSize - targetBuffer->r), sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->f));
+                memcpy(targetBuffer->buffer, enqueueData + (targetBuffer->bufferSize - targetBuffer->r), targetBuffer->sizeOfElement*(targetBuffer->f));
                 targetBuffer->r = targetBuffer->f;
             }
         }
         break;
 
-    case 3:     //rear < front
-
+    case BUF_STATE_R_LESS_THAN_F:     //rear < front
         if(targetBuffer->r + enqueueSize <= targetBuffer->f)
         {
             /**  memcpy() between buffer and enqueue data
               *  start from rear:r to r + enqueueSize
               *  when r + enqueueSize is not exceed front : f   (Overwritten do not occur)
               */
-            memcpy(targetBuffer->buffer + (targetBuffer->r), enqueueData, sizeof(_BUFFER_DATA_TYPE)*enqueueSize);
+            memcpy(targetBuffer->buffer + (targetBuffer->r), enqueueData, targetBuffer->sizeOfElement*enqueueSize);
             targetBuffer->r = (targetBuffer->r + enqueueSize)%targetBuffer->bufferSize;
         }
         else
@@ -126,7 +126,7 @@ void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, void *enqueueDa
               *  start from rear:r to r + enqueueSize
               *  when r + enqueueSize is exceed front : f       (Overwritten occur!)
               */
-            memcpy(targetBuffer->buffer + (targetBuffer->r), enqueueData, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->f - targetBuffer->r));
+            memcpy(targetBuffer->buffer + (targetBuffer->r), enqueueData, targetBuffer->sizeOfElement*(targetBuffer->f - targetBuffer->r));
             targetBuffer->r = targetBuffer->f;
         }
         break;
@@ -137,11 +137,12 @@ void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer, void *enqueueDa
     }
 
 }
+
 /**
   * @brief  CircularBuffer_Dequeue() : This function is used to "De-queue" an input data into a circular buffer.
   * @param  targetBuffer : target circular buffer
-  * @param  dequeueData  : dequeued data (pass by ref)
-  * @param  dequeueSize  : size of dequeued data
+  * @param  dequeueData  : dequeued data pointer
+  * @param  dequeueSize  : size of dequeued data (#of element)
   * @retval None
   */
 void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueData, uint32_t dequeueSize)
@@ -153,24 +154,24 @@ void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueDa
       * 1 -> with rear > front
       * 2 -> with rear <= front
       */
-    if(CircularBuffer_IsEmpty(targetBuffer))            bufferState = 0;    //Empty state
-    else if(targetBuffer->r  >  targetBuffer->f)        bufferState = 1;    //rear > front
-    else if(targetBuffer->r  <= targetBuffer->f)        bufferState = 2;    //rear <= front
+    if(CircularBuffer_IsEmpty(targetBuffer))            bufferState = BUF_STATE_EMPTY;          //Empty state
+    else if(targetBuffer->r  >  targetBuffer->f)        bufferState = BUF_STATE_R_MORE_THAN_F;  //rear > front
+    else if(targetBuffer->r  <= targetBuffer->f)        bufferState = BUF_STATE_R_LESS_THAN_F;  //rear <= front
 
     switch (bufferState){
-    case 0:     //Empty state
+    case BUF_STATE_EMPTY:     //Empty state
         /* Buffer is empty, There's no data in buffer. So, do nothing. */
         break;
 
-    case 1:     //rear > front
+    case BUF_STATE_R_MORE_THAN_F:     //rear > front
         if(dequeueSize <= (targetBuffer->r - targetBuffer->f))
         {
             /**  memcpy() between buffer and dequeue data
               *  start from front:f to f + dequeueSize
               *  when f + dequeueSize does not exceed r
               */
-            memcpy(dequeueData, targetBuffer->buffer + targetBuffer->f, sizeof(_BUFFER_DATA_TYPE)*dequeueSize);
-            memset(targetBuffer->buffer + targetBuffer->f, 0, sizeof(_BUFFER_DATA_TYPE)*dequeueSize);
+            memcpy(dequeueData, targetBuffer->buffer + targetBuffer->f, (targetBuffer->sizeOfElement)*dequeueSize);
+            memset(targetBuffer->buffer + targetBuffer->f, 0, (targetBuffer->sizeOfElement)*dequeueSize);
             targetBuffer->f = targetBuffer->f + dequeueSize;
         }
         else
@@ -179,8 +180,8 @@ void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueDa
               *  start from front:f to f + dequeueSize
               *  when f + dequeueSize exceed r  (overwritten occur!)
               */
-            memcpy(dequeueData, targetBuffer->buffer + targetBuffer->f, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->r - targetBuffer->f));
-            memset(targetBuffer->buffer + targetBuffer->f, 0, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->r - targetBuffer->f));
+            memcpy(dequeueData, targetBuffer->buffer + targetBuffer->f, targetBuffer->sizeOfElement*(targetBuffer->r - targetBuffer->f));
+            memset(targetBuffer->buffer + targetBuffer->f, 0, targetBuffer->sizeOfElement*(targetBuffer->r - targetBuffer->f));
             targetBuffer->r = targetBuffer->r;
         }
 
@@ -194,7 +195,7 @@ void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueDa
         }
         break;
 
-    case 2:     //rear <= front
+    case BUF_STATE_R_LESS_THAN_F:     //rear <= front
         if(targetBuffer->f + dequeueSize <= targetBuffer->bufferSize)
         {
             /**  memcpy() between buffer and dequeue data
@@ -202,8 +203,8 @@ void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueDa
               *  when f + dequeueSize is not exceed end-of-buffer   (Not Wrapping)
               *  then, dequeue only 1 section
               */
-            memcpy(dequeueData, targetBuffer->buffer + targetBuffer->f, sizeof(_BUFFER_DATA_TYPE)*(dequeueSize));
-            memset(targetBuffer->buffer + targetBuffer->f, 0, sizeof(_BUFFER_DATA_TYPE)*(dequeueSize));
+            memcpy(dequeueData, targetBuffer->buffer + targetBuffer->f, targetBuffer->sizeOfElement*(dequeueSize));
+            memset(targetBuffer->buffer + targetBuffer->f, 0, targetBuffer->sizeOfElement*(dequeueSize));
             targetBuffer->f = (targetBuffer->f + dequeueSize)%targetBuffer->bufferSize;
         }
         else
@@ -214,22 +215,22 @@ void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueDa
               *  then, dequeue with 2 sections
               */
             /* 1st section copy */
-            memcpy(dequeueData, targetBuffer->buffer + targetBuffer->f, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->bufferSize - targetBuffer->f));
-            memset(targetBuffer->buffer + targetBuffer->f, 0, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->bufferSize - targetBuffer->f));
+            memcpy(dequeueData, targetBuffer->buffer + targetBuffer->f, targetBuffer->sizeOfElement*(targetBuffer->bufferSize - targetBuffer->f));
+            memset(targetBuffer->buffer + targetBuffer->f, 0, targetBuffer->sizeOfElement*(targetBuffer->bufferSize - targetBuffer->f));
 
             /* 2nd section copy (wrapping part) */
             // No overwritten occur
             if(dequeueSize + targetBuffer->f - targetBuffer->bufferSize <= targetBuffer->r)
             {
-                memcpy(dequeueData + (targetBuffer->bufferSize - targetBuffer->f), targetBuffer->buffer, sizeof(_BUFFER_DATA_TYPE)*(dequeueSize + targetBuffer->f - targetBuffer->bufferSize));
-                memset(targetBuffer->buffer, 0, sizeof(_BUFFER_DATA_TYPE)*(dequeueSize + targetBuffer->f - targetBuffer->bufferSize));
+                memcpy(dequeueData + (targetBuffer->bufferSize - targetBuffer->f), targetBuffer->buffer, targetBuffer->sizeOfElement*(dequeueSize + targetBuffer->f - targetBuffer->bufferSize));
+                memset(targetBuffer->buffer, 0, targetBuffer->sizeOfElement*(dequeueSize + targetBuffer->f - targetBuffer->bufferSize));
                 targetBuffer->f = (targetBuffer->f + dequeueSize)%targetBuffer->bufferSize;
             }
             // Overwritten occur during wrapping!
             else
             {
-                memcpy(dequeueData + (targetBuffer->bufferSize - targetBuffer->f), targetBuffer->buffer, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->r));
-                memset(targetBuffer->buffer, 0, sizeof(_BUFFER_DATA_TYPE)*(targetBuffer->r));
+                memcpy(dequeueData + (targetBuffer->bufferSize - targetBuffer->f), targetBuffer->buffer, targetBuffer->sizeOfElement*(targetBuffer->r));
+                memset(targetBuffer->buffer, 0, targetBuffer->sizeOfElement*(targetBuffer->r));
                 targetBuffer->f = targetBuffer->r;
             }
         }
@@ -239,7 +240,7 @@ void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueDa
               * then, set r,f to -1
               */
             targetBuffer->f = -1;
-            targetBuffer->r  = -1;
+            targetBuffer->r = -1;
         }
         break;
 
@@ -247,20 +248,25 @@ void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer, void *dequeueDa
         break;
     }
 }
+
 /**
   * @brief  CircularBuffer_Init() : This function is used to "initialize" a circular buffer struct.
-  * @param  targetBuffer : target circular buffer
-  * @param  SetFrameSize    : size of frame-based processing
-  * @param  SetOverlap      : frame overlap (must between 0 up to "SetFrameSize")
+  * @param  targetBuffer     : target circular buffer
+  * @param  SetSizeOfElement : size of each element (bytes)
+  * @param  SetFrameSize  : size of frame-based processing
+  * @param  SetOverlap    : overlap size
+  *                         Note! - overlap size must not exceed "SetFrameSize"
+  *                               - result of modulo between frameSize and overlapSize needs to be 0 (SetFrameSize % SetOverlap = 0) to make frame-based buffer scheduling works properly.
   * @retval None
   */
-void CircularBuffer_Init(CircularBufferTypeDef *targetBuffer, int8_t SetFrameSize, int16_t SetOverlap)
+void CircularBuffer_Init(CircularBufferTypeDef *targetBuffer, int8_t SetSizeOfElement, int8_t SetFrameSize, int16_t SetOverlap)
 {
     targetBuffer->f = -1;
-    targetBuffer->r  = -1;
+    targetBuffer->r = -1;
     targetBuffer->bufferSize  = CIRCULAR_BUFFER_SIZE;
+    targetBuffer->sizeOfElement = SetSizeOfElement;
 
-    if(SetFrameSize > CIRCULAR_BUFFER_SIZE)     targetBuffer->frameSize = CIRCULAR_BUFFER_SIZE;
+    if(SetFrameSize > targetBuffer->bufferSize)     targetBuffer->frameSize = targetBuffer->bufferSize;
     else    targetBuffer->frameSize = SetFrameSize;
 
     targetBuffer->overlap   = SetOverlap;
@@ -292,38 +298,74 @@ uint8_t CircularBuffer_IsEmpty(CircularBufferTypeDef *targetBuffer)
 }
 
 /**
-  * @brief  CircularBuffer_CheckNextFrameReady() : This function is used to check if ring buffer is ready for the next frame-based processing or not.
-  * @param  buffer : circular buffer
-  * @retval 1  -> ready
-  *         0  -> not ready
-  *         -1 -> error
+  * @brief  CircularBuffer_IsNextFrameReady() : This function is used to check if ring buffer is ready for the next frame-based processing or not.
+  *                                             If buffer is ready to be framed. Then, buffer will pop a next data frame with overlap from the previous frame.
+  *                                             Warning : Function "De-enqueue" is called with De-Q size = frameSize - overlapSize, as for the framing algorithm when buffer is ready.
+  * @param  buffer    : circular buffer
+  * @param  dataFrame : sink data frame pointer
+  * @retval FRAME_IS_READY      -> ready
+  *         FRAME_IS_NOT_READY  -> not ready
+  *         FRAME_ERROR         -> error
   */
-int8_t CircularBuffer_CheckNextFrameReady(CircularBufferTypeDef *buffer)
+int8_t CircularBuffer_IsNextFrameReady(CircularBufferTypeDef *buffer, _BUFFER_DATA_TYPE *dataFrame)
 {
-    static uint8_t firstFrameReady = 0;
+    static uint8_t firstFrameCompleteFlag = FIRST_FRAME_IS_NOT_COMPLETED;
+    static _BUFFER_DATA_TYPE *previousOverlap;
+    static uint16_t dequeueSize;
 
-    if(firstFrameReady == 0)
+    if(firstFrameCompleteFlag == FIRST_FRAME_IS_NOT_COMPLETED)
     {
-        if(((buffer->r - buffer->f)%(buffer->frameSize) == 0) && (buffer->f != buffer->r))
+        if((buffer->r - buffer->f >= buffer->frameSize) && (buffer->f != buffer->r))
         {
-            firstFrameReady = 1;
-            return 1;
+            previousOverlap = (_BUFFER_DATA_TYPE *)(calloc(buffer->overlap, buffer->sizeOfElement));
+            CircularBuffer_Dequeue(buffer, dataFrame, buffer->frameSize); // copy the first frame
+            memcpy(previousOverlap, dataFrame + (buffer->frameSize - buffer->overlap), buffer->sizeOfElement*(buffer->overlap)); // update overlap section
+
+            dequeueSize = buffer->frameSize - buffer->overlap;
+            firstFrameCompleteFlag = FIRST_FRAME_IS_COMPLETED;
+
+            return FRAME_IS_READY;
         }
-        else    return 0;
+        else    return FRAME_IS_NOT_READY;
     }
-    else if(firstFrameReady != 0)
+    else if(firstFrameCompleteFlag == FIRST_FRAME_IS_COMPLETED)
     {
-        if(buffer->r >= buffer->f)
+        if(buffer->r > buffer->f)
         {
-            if((buffer->r - buffer->f)%(buffer->overlap) == 0)     return 1;
-            else    return 0;
+            if(((buffer->r - buffer->f) >= (buffer->frameSize - buffer->overlap)))
+            {
+                CircularBuffer_Dequeue(buffer, dataFrame + buffer->overlap, dequeueSize);
+                memcpy(dataFrame, previousOverlap, buffer->sizeOfElement*(buffer->overlap));
+                memcpy(previousOverlap, dataFrame + (buffer->frameSize - buffer->overlap), buffer->sizeOfElement*(buffer->overlap)); // update overlap section
+
+                return FRAME_IS_READY;
+            }
+            else    return FRAME_IS_NOT_READY;
         }
         else if(buffer->r < buffer->f)
         {
-            if((buffer->bufferSize + buffer->r - buffer->f)%(buffer->overlap) == 0)    return 1;
-            else    return 0;
+            if((buffer->bufferSize + buffer->r - buffer->f) >= (buffer->frameSize - buffer->overlap))
+            {
+                CircularBuffer_Dequeue(buffer, dataFrame + buffer->overlap, buffer->frameSize - buffer->overlap);
+                memcpy(dataFrame, previousOverlap, buffer->sizeOfElement*(buffer->overlap));
+                memcpy(previousOverlap, dataFrame + (buffer->frameSize - buffer->overlap), buffer->sizeOfElement*(buffer->overlap)); // update overlap section
+
+                return FRAME_IS_READY;
+            }
+            else    return FRAME_IS_NOT_READY;
+        }
+        else if(buffer->r == buffer->f)
+        {
+            if(CircularBuffer_IsFull(buffer))
+            {
+                CircularBuffer_Dequeue(buffer, dataFrame + buffer->overlap, buffer->frameSize - buffer->overlap);
+                memcpy(dataFrame, previousOverlap, buffer->sizeOfElement*(buffer->overlap));
+                memcpy(previousOverlap, dataFrame + (buffer->frameSize - buffer->overlap), buffer->sizeOfElement*(buffer->overlap)); // update overlap section
+
+                return FRAME_IS_READY;
+            }
+            else if(CircularBuffer_IsEmpty(buffer))     return FRAME_IS_NOT_READY;
         }
     }
-
-    return -1;	//error
+    return FRAME_ERROR;	//error
 }

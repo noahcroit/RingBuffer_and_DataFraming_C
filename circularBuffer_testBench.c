@@ -3,15 +3,16 @@
 
 #define     SOURCE_BUFFER_SIZE      4
 #define     SINK_BUFFER_SIZE        5
+
 #define     DEFAULT_FRAME_SIZE      4
-#define     DEFAULT_FRAME_OVERLAP   0.5*DEFAULT_FRAME_SIZE
+#define     DEFAULT_FRAME_OVERLAP   2
 
 CircularBufferTypeDef myBuffer;
 void testBench_fullTest();
 void frameBasedFunctionTest();
 
-_BUFFER_DATA_TYPE sourceBuffer[]    = {0, 0, 0, 0};
-_BUFFER_DATA_TYPE sinkBuffer[]      = {0, 0, 0, 0, 0};
+_BUFFER_DATA_TYPE sourceBuffer[4]    = {0, 0, 0, 0};
+_BUFFER_DATA_TYPE sinkBuffer[5]      = {0, 0, 0, 0, 0};
 
 int main()
 {
@@ -24,8 +25,9 @@ void testBench_fullTest()
 {
     static int i;
 
-    CircularBuffer_Init(&myBuffer, DEFAULT_FRAME_SIZE, DEFAULT_FRAME_OVERLAP);
-    myBuffer.buffer[0] = 0; myBuffer.buffer[1] = 0; myBuffer.buffer[2] = 0; myBuffer.buffer[3] = 0; myBuffer.buffer[4] = 0; myBuffer.buffer[5] = 0; myBuffer.buffer[6] = 0; myBuffer.buffer[7] = 0;
+    //CircularBuffer_Init(&myBuffer, sizeof(_BUFFER_DATA_TYPE), DEFAULT_FRAME_SIZE, DEFAULT_FRAME_OVERLAP);
+    CircularBuffer_Init(&myBuffer, sizeof(int32_t), DEFAULT_FRAME_SIZE, DEFAULT_FRAME_OVERLAP);
+    //myBuffer.buffer[0] = 0; myBuffer.buffer[1] = 0; myBuffer.buffer[2] = 0; myBuffer.buffer[3] = 0; myBuffer.buffer[4] = 0; myBuffer.buffer[5] = 0; myBuffer.buffer[6] = 0; myBuffer.buffer[7] = 0;
     printf("myBuffer :\t");
     for(i=0; i<myBuffer.bufferSize; i++)
     {
@@ -89,26 +91,45 @@ void testBench_fullTest()
 }
 void frameBasedFunctionTest()
 {
-    int dataIn;
-    int i;
+    _BUFFER_DATA_TYPE dataIn;
+    //_BUFFER_DATA_TYPE *frame;
+    _BUFFER_DATA_TYPE frame[DEFAULT_FRAME_SIZE];
 
-    CircularBuffer_Init(&myBuffer, DEFAULT_FRAME_SIZE, DEFAULT_FRAME_OVERLAP);
-    myBuffer.buffer[0] = 0; myBuffer.buffer[1] = 0; myBuffer.buffer[2] = 0; myBuffer.buffer[3] = 0; myBuffer.buffer[4] = 0; myBuffer.buffer[5] = 0; myBuffer.buffer[6] = 0; myBuffer.buffer[7] = 0;
+    int i;
+    int checkFrame;
+
+    /* initialize buffer & frame */
+    CircularBuffer_Init(&myBuffer, sizeof(_BUFFER_DATA_TYPE), DEFAULT_FRAME_SIZE, DEFAULT_FRAME_OVERLAP);
+    //myBuffer.buffer[0] = 0; myBuffer.buffer[1] = 0; myBuffer.buffer[2] = 0; myBuffer.buffer[3] = 0; myBuffer.buffer[4] = 0; myBuffer.buffer[5] = 0; myBuffer.buffer[6] = 0; myBuffer.buffer[7] = 0;
     printf("myBuffer :\t");
     for(i=0; i<myBuffer.bufferSize; i++)
     {
         printf("%d\t", myBuffer.buffer[i]);
     }
+
+    /* frame-based routine start */
     while(1)
     {
-        scanf("%d", &dataIn);
+        scanf("%d", (int *)&dataIn);
         CircularBuffer_Enqueue(&myBuffer, &dataIn, 1);
+        checkFrame = CircularBuffer_IsNextFrameReady(&myBuffer, frame);
+        printf("frame ready = %d\n", checkFrame);
+
+        if(checkFrame == FRAME_IS_READY)
+        {
+            printf("frame :\t");
+            for(i=0; i<DEFAULT_FRAME_SIZE; i++)
+            {
+                printf("%d\t", frame[i]);
+            }
+            printf("\n");
+        }
+
         printf("myBuffer :\t");
         for(i=0; i<myBuffer.bufferSize; i++)
         {
             printf("%d\t", myBuffer.buffer[i]);
         }
-        printf("frame ready = %d\n", CircularBuffer_CheckNextFrameReady(&myBuffer));
         printf("rear = %d\tfront = %d\n\n", myBuffer.r, myBuffer.f);
     }
 }
