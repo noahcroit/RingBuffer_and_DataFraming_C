@@ -47,21 +47,21 @@ typedef struct {
 } CircularBufferTypeDef;
 
 /* Function Prototyping for circularBuffer.h */
-void    CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuffer,
-                               const void *enqueueData,
-                               uint32_t enqueueSize);
+void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuf,
+                            const void *enqueueData,
+                            uint32_t enqueueSize);
 
-void    CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuffer,
-                               void *dequeueData,
-                               uint32_t dequeueSize);
+void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuf,
+                            void *dequeueData,
+                            uint32_t dequeueSize);
 
-void    CircularBuffer_Init(CircularBufferTypeDef *targetBuffer,
-                            int8_t SetSizeOfElement,
-                            int8_t SetFrameSize,
-                            int16_t SetOverlap);
+void CircularBuffer_Init(CircularBufferTypeDef *targetBuf,
+                         int8_t SetElementSize,
+                         int8_t SetFrameSize,
+                         int16_t SetOverlap);
 
 void    CircularBuffer_Flush(CircularBufferTypeDef *targetBuf);
-uint8_t CircularBuffer_IsEmpty(CircularBufferTypeDef *targetBuffer);
-uint8_t CircularBuffer_IsFull(CircularBufferTypeDef *targetBuffer);
-int8_t  CircularBuffer_IsNextFrameReady(CircularBufferTypeDef *buffer, _BUFFER_DATA_TYPE *frame);
+uint8_t CircularBuffer_IsEmpty(CircularBufferTypeDef *targetBuf);
+uint8_t CircularBuffer_IsFull(CircularBufferTypeDef *targetBuf);
+int8_t CircularBuffer_IsNextFrameReady(CircularBufferTypeDef *buffer, _BUFFER_DATA_TYPE *dataFrame);
 
