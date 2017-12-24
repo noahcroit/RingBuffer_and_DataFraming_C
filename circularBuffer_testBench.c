@@ -31,7 +31,7 @@ void testBench_fullTest()
     printf("myBuffer :\t");
     for(i=0; i<myBuffer.bufferSize; i++)
     {
-        printf("%d\t", myBuffer.buffer[i]);
+        printf("%d\t", myBuffer.buf[i]);
     }
 
     /* 1) Enqueue 1 2 3 4
@@ -42,7 +42,7 @@ void testBench_fullTest()
     printf("\n\nmyBuffer :\t");
     for(i=0; i<myBuffer.bufferSize; i++)
     {
-        printf("%d\t", myBuffer.buffer[i]);
+        printf("%d\t", myBuffer.buf[i]);
     }
     printf("\nrear = %d\tfront = %d\n", myBuffer.r, myBuffer.f);
     printf("size = %d\n", myBuffer.bufferSize);
@@ -51,7 +51,7 @@ void testBench_fullTest()
     printf("\n\nmyBuffer :\t");
     for(i=0; i<myBuffer.bufferSize; i++)
     {
-        printf("%d\t", myBuffer.buffer[i]);
+        printf("%d\t", myBuffer.buf[i]);
     }
     printf("\nrear = %d\tfront = %d\n", myBuffer.r, myBuffer.f);
     printf("size = %d\n", myBuffer.bufferSize);
@@ -61,7 +61,7 @@ void testBench_fullTest()
     printf("\n\nmyBuffer :\t");
     for(i=0; i<myBuffer.bufferSize; i++)
     {
-        printf("%d\t", myBuffer.buffer[i]);
+        printf("%d\t", myBuffer.buf[i]);
     }
     printf("\nrear = %d\tfront = %d\n", myBuffer.r, myBuffer.f);
     printf("size = %d\n", myBuffer.bufferSize);
@@ -72,7 +72,7 @@ void testBench_fullTest()
     printf("\n\nmyBuffer :\t");
     for(i=0; i<myBuffer.bufferSize; i++)
     {
-        printf("%d\t", myBuffer.buffer[i]);
+        printf("%d\t", myBuffer.buf[i]);
     }
     printf("\nrear = %d\tfront = %d\n", myBuffer.r, myBuffer.f);
     printf("size = %d\n", myBuffer.bufferSize);
@@ -82,7 +82,7 @@ void testBench_fullTest()
     printf("\n\nmyBuffer :\t");
     for(i=0; i<myBuffer.bufferSize; i++)
     {
-        printf("%d\t", myBuffer.buffer[i]);
+        printf("%d\t", myBuffer.buf[i]);
     }
 
     printf("\n\nFinal buffer properties\n");
@@ -104,14 +104,14 @@ void frameBasedFunctionTest()
     printf("myBuffer :\t");
     for(i=0; i<myBuffer.bufferSize; i++)
     {
-        printf("%d\t", myBuffer.buffer[i]);
+        printf("%.2f\t", myBuffer.buf[i]);
     }
 
     /* frame-based routine start */
     while(1)
     {
-        scanf("%d", (int *)&dataIn);
-        CircularBuffer_Enqueue(&myBuffer, &dataIn, 1);
+        scanf("%f", (int *)&dataIn);
+        CircularBuffer_Enqueue(&myBuffer, (void *)&dataIn, 1);
         checkFrame = CircularBuffer_IsNextFrameReady(&myBuffer, frame);
         printf("frame ready = %d\n", checkFrame);
 
@@ -120,7 +120,7 @@ void frameBasedFunctionTest()
             printf("frame :\t");
             for(i=0; i<DEFAULT_FRAME_SIZE; i++)
             {
-                printf("%d\t", frame[i]);
+                printf("%.2f\t", frame[i]);
             }
             printf("\n");
         }
@@ -128,7 +128,7 @@ void frameBasedFunctionTest()
         printf("myBuffer :\t");
         for(i=0; i<myBuffer.bufferSize; i++)
         {
-            printf("%d\t", myBuffer.buffer[i]);
+            printf("%.2f\t", myBuffer.buf[i]);
         }
         printf("rear = %d\tfront = %d\n\n", myBuffer.r, myBuffer.f);
     }
