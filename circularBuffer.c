@@ -60,7 +60,6 @@ void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuf, const void *enqueu
         targetBuf->f = 0;
         targetBuf->r = 0;
         goto label1;
-        break;
 
     case BUF_STATE_FULL:     //Full state
         /* Do nothing */
