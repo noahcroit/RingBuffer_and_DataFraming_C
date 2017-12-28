@@ -12,7 +12,7 @@
 
 #ifndef  CIRCULARBUFFER_H
 #define  CIRCULARBUFFER_H
-#endif
+
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -64,4 +64,4 @@ void    CircularBuffer_Flush(CircularBufferTypeDef *targetBuf);
 uint8_t CircularBuffer_IsEmpty(CircularBufferTypeDef *targetBuf);
 uint8_t CircularBuffer_IsFull(CircularBufferTypeDef *targetBuf);
 int8_t CircularBuffer_IsNextFrameReady(CircularBufferTypeDef *buffer, _BUFFER_DATA_TYPE *dataFrame);
-
+#endif
