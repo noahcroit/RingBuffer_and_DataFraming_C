@@ -10,17 +10,17 @@
   *
   */
 
-#ifndef  CIRCULARBUFFER_H
-#define  CIRCULARBUFFER_H
-#endif
+#ifndef  __CIRCULARBUFFER_H
+#define  __CIRCULARBUFFER_H
+
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 
 /* Define for buffer data structure */
-#define     CIRCULAR_BUFFER_SIZE            8
-#define     _BUFFER_DATA_TYPE_DEFAULT       float
+#define     CIRCULAR_BUFFER_SIZE            2048
+#define     _BUFFER_DATA_TYPE_DEFAULT       int16_t
 #define     BUF_STATE_EMPTY                 0
 #define     BUF_STATE_FULL                  1
 #define     BUF_STATE_R_MORE_THAN_F         2
@@ -32,13 +32,13 @@
 #define     FRAME_IS_READY                  1
 #define     FRAME_ERROR                     -1
 
-typedef _BUFFER_DATA_TYPE_DEFAULT   _BUFFER_DATA_TYPE;
+typedef _BUFFER_DATA_TYPE_DEFAULT   _RING_BUFFER_DATA_TYPE;
 
 typedef struct {
-    _BUFFER_DATA_TYPE   buf[CIRCULAR_BUFFER_SIZE];   //data 1D array
+    _RING_BUFFER_DATA_TYPE   buf[CIRCULAR_BUFFER_SIZE];   //data 1D array
     int16_t             r;              //rear
     int16_t             f;              //front
-    int16_t		        bufferSize;         //buffer size (element)
+    int16_t		          bufferSize;         //buffer size (element)
     int8_t              elementSize;    //size of each element (bytes)
 
     /* member for frame-based processing */
@@ -57,11 +57,11 @@ void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuf,
 
 void CircularBuffer_Init(CircularBufferTypeDef *targetBuf,
                          int8_t SetElementSize,
-                         int8_t SetFrameSize,
+                         int16_t SetFrameSize,
                          int16_t SetOverlap);
 
 void    CircularBuffer_Flush(CircularBufferTypeDef *targetBuf);
 uint8_t CircularBuffer_IsEmpty(CircularBufferTypeDef *targetBuf);
 uint8_t CircularBuffer_IsFull(CircularBufferTypeDef *targetBuf);
-int8_t CircularBuffer_IsNextFrameReady(CircularBufferTypeDef *buffer, _BUFFER_DATA_TYPE *dataFrame);
-
+int8_t  CircularBuffer_IsNextFrameReady(CircularBufferTypeDef *buffer, _RING_BUFFER_DATA_TYPE *dataFrame);
+#endif

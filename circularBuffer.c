@@ -18,14 +18,14 @@
 
     + For a frame-based processing by using FIFO circular buffer. After frameSize and overlapSize initialization is done by using CircularBuffer_Init().
       The next data frame of FIFO circular buffer can be extracted by using function CircularBuffer_IsNextFrameReady().
-      If circular buffer is ready to framing the next data frame. The next frame will be loaded automatically into the input frame after calling CircularBuffer_IsNextFrameReady().
+      If circular buffer is ready to frame the next data frame. The next frame will be loaded automatically into the input frame after calling CircularBuffer_IsNextFrameReady().
       If not. Then, the next frame will not be loaded.
 
   * Note : How to changing a bufferSize and dataType of circular buffer
     ----------------------------------------------------
     + BufferSize is defined by CIRCULAR_BUFFER_SIZE in circularBuffer.h. Default size is 8 elements.
-    + The default dataType of circular buffer is defined by typedef : _BUFFER_DATA_TYPE in circularBuffer.h which is "int16_t".
-    + This can be changed to another type (example, float32_t, uint32_t etc.) by changing typedef : _BUFFER_DATA_TYPE_DEFAULT in circularBuffer.h to another type.
+    + The default dataType of circular buffer is defined by typedef : _RING_BUFFER_DATA_TYPE in circularBuffer.h which is "int16_t".
+    + This can be changed to another type (example, float32_t, uint32_t etc.) by changing typedef : _RING_BUFFER_DATA_TYPE in circularBuffer.h to another type.
 **/
 
 #include "circularBuffer.h"
@@ -251,7 +251,7 @@ void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuf, void *dequeueData,
   *                               - result of modulo between frameSize and overlapSize needs to be 0 (SetFrameSize % SetOverlap = 0) to make frame-based buffer scheduling works properly.
   * @retval None
   */
-void CircularBuffer_Init(CircularBufferTypeDef *targetBuf, int8_t SetElementSize, int8_t SetFrameSize, int16_t SetOverlap)
+void CircularBuffer_Init(CircularBufferTypeDef *targetBuf, int8_t SetElementSize, int16_t SetFrameSize, int16_t SetOverlap)
 {
     targetBuf->f = -1;
     targetBuf->r = -1;
@@ -310,17 +310,17 @@ uint8_t CircularBuffer_IsEmpty(CircularBufferTypeDef *targetBuf)
   *         FRAME_IS_NOT_READY  -> not ready
   *         FRAME_ERROR         -> error
   */
-int8_t CircularBuffer_IsNextFrameReady(CircularBufferTypeDef *buffer, _BUFFER_DATA_TYPE *dataFrame)
+int8_t CircularBuffer_IsNextFrameReady(CircularBufferTypeDef *buffer, _RING_BUFFER_DATA_TYPE *dataFrame)
 {
     static uint8_t firstFrameCompleteFlag = FIRST_FRAME_IS_NOT_COMPLETED;
-    static _BUFFER_DATA_TYPE *previousOverlap;
+    static _RING_BUFFER_DATA_TYPE *previousOverlap;
     static uint16_t dequeueSize;
 
     if(firstFrameCompleteFlag == FIRST_FRAME_IS_NOT_COMPLETED)
     {
         if((buffer->r - buffer->f >= buffer->frameSize) && (buffer->f != buffer->r))
         {
-            previousOverlap = (_BUFFER_DATA_TYPE *)(calloc(buffer->overlap, buffer->elementSize));
+            previousOverlap = (_RING_BUFFER_DATA_TYPE *)(calloc(buffer->overlap, buffer->elementSize));
             CircularBuffer_Dequeue(buffer, dataFrame, buffer->frameSize); // copy the first frame
             memcpy(previousOverlap, dataFrame + (buffer->frameSize - buffer->overlap), buffer->elementSize*(buffer->overlap)); // update overlap section
 
