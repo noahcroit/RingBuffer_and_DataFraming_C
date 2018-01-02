@@ -10,13 +10,8 @@
   *
   */
 
-<<<<<<< HEAD
 #ifndef  __CIRCULARBUFFER_H
 #define  __CIRCULARBUFFER_H
-=======
-#ifndef  CIRCULARBUFFER_H
-#define  CIRCULARBUFFER_H
->>>>>>> 3ab4ffced880e18576b85a2dfa4d41d23b5b27aa
 
 
 #include <stdlib.h>
@@ -68,9 +63,5 @@ void CircularBuffer_Init(CircularBufferTypeDef *targetBuf,
 void    CircularBuffer_Flush(CircularBufferTypeDef *targetBuf);
 uint8_t CircularBuffer_IsEmpty(CircularBufferTypeDef *targetBuf);
 uint8_t CircularBuffer_IsFull(CircularBufferTypeDef *targetBuf);
-<<<<<<< HEAD
 int8_t  CircularBuffer_IsNextFrameReady(CircularBufferTypeDef *buffer, _RING_BUFFER_DATA_TYPE *dataFrame);
-=======
-int8_t CircularBuffer_IsNextFrameReady(CircularBufferTypeDef *buffer, _BUFFER_DATA_TYPE *dataFrame);
->>>>>>> 3ab4ffced880e18576b85a2dfa4d41d23b5b27aa
 #endif
