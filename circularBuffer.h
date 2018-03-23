@@ -18,50 +18,44 @@
 #include <stdint.h>
 #include <string.h>
 
-/* Define for buffer data structure */
-#define     CIRCULAR_BUFFER_SIZE            2048
-#define     _BUFFER_DATA_TYPE_DEFAULT       int16_t
+/* Define for default setup of buffer data structure */
+#define     DEFAULT_CIRCULAR_BUFFER_SIZE    2048
+#define     _DEFAULT_BUFFER_DATA_TYPE       int32_t
+
+/* Define of all buffer states */
 #define     BUF_STATE_EMPTY                 0
 #define     BUF_STATE_FULL                  1
 #define     BUF_STATE_R_MORE_THAN_F         2
 #define     BUF_STATE_R_LESS_THAN_F         3
 
-#define     FIRST_FRAME_IS_NOT_COMPLETED    0
-#define     FIRST_FRAME_IS_COMPLETED        1
-#define     FRAME_IS_NOT_READY              0
-#define     FRAME_IS_READY                  1
-#define     FRAME_ERROR                     -1
-
-typedef _BUFFER_DATA_TYPE_DEFAULT   _RING_BUFFER_DATA_TYPE;
+typedef _DEFAULT_BUFFER_DATA_TYPE   _RING_BUFFER_DATA_TYPE;
 
 typedef struct {
-    _RING_BUFFER_DATA_TYPE   buf[CIRCULAR_BUFFER_SIZE];   //data 1D array
-    int16_t             r;              //rear
-    int16_t             f;              //front
-    int16_t		          bufferSize;         //buffer size (element)
-    int8_t              elementSize;    //size of each element (bytes)
 
-    /* member for frame-based processing */
-    int16_t             frameSize;      //must be less than or equal to buffer size
-    int16_t             overlap;        //overlap ratio, must between 0 to 1 (floating-point type)
-} CircularBufferTypeDef;
+    void                *buf;           //pointer of 1-D data array
+    int32_t             r;              //rear
+    int32_t             f;              //front
+    int32_t		        	bufferSize;     //buffer size (elements)
+    int8_t              elementSize;    //size per element (bytes)
+
+} circularBuffer_TypeDef;
 
 /* Function Prototyping for circularBuffer.h */
-void CircularBuffer_Enqueue(CircularBufferTypeDef *targetBuf,
-                            const void *enqueueData,
-                            uint32_t enqueueSize);
+void CircularBuffer_Enqueue (circularBuffer_TypeDef *targetBuf,
+                             const void *enqueueData,
+                             uint32_t enqueueSize);
 
-void CircularBuffer_Dequeue(CircularBufferTypeDef *targetBuf,
-                            void *dequeueData,
-                            uint32_t dequeueSize);
+void CircularBuffer_Dequeue (circularBuffer_TypeDef *targetBuf,
+                             void *dequeueData,
+                             uint32_t dequeueSize);
 
-void CircularBuffer_Init(CircularBufferTypeDef *targetBuf,
-                         int8_t SetElementSize,
-                         int16_t SetFrameSize,
-                         int16_t SetOverlap);
+void CircularBuffer_Init    (circularBuffer_TypeDef *targetBuf,
+                             void *pBuf,
+                             int8_t SetElementSize,
+                             int32_t SetBufferSize);
 
-void    CircularBuffer_Flush(CircularBufferTypeDef *targetBuf);
-uint8_t CircularBuffer_IsEmpty(CircularBufferTypeDef *targetBuf);
-uint8_t CircularBuffer_IsFull(CircularBufferTypeDef *targetBuf);
-int8_t  CircularBuffer_IsNextFrameReady(CircularBufferTypeDef *buffer, _RING_BUFFER_DATA_TYPE *dataFrame);
+void    CircularBuffer_Flush    (circularBuffer_TypeDef *targetBuf);
+uint8_t CircularBuffer_IsEmpty  (circularBuffer_TypeDef *targetBuf);
+uint8_t CircularBuffer_IsFull   (circularBuffer_TypeDef *targetBuf);
+
 #endif
